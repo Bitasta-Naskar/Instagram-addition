@@ -326,7 +326,8 @@ def get_visited_profiles() -> List[Dict[str, Any]]:
     ORDER BY a.username ASC
     """)
     rows = []
-    for r in cursor.fetchall():
+    raw_accounts = cursor.fetchall()
+    for r in raw_accounts:
         item = dict(r)
         liked_c = item["liked_count"]
         saved_c = item["saved_count"]
@@ -339,6 +340,17 @@ def get_visited_profiles() -> List[Dict[str, Any]]:
         else:
             item["interaction_type"] = "saved"
             item["badge_label"] = "Saved"
+
+        # Fetch only active liked/saved posts for this profile
+        # So undoing like/save removes the post from this section immediately
+        cursor.execute("""
+        SELECT id, caption, image_url, is_liked, is_saved, created_at
+        FROM posts
+        WHERE account_id = ? AND (is_liked = 1 OR is_saved = 1)
+        ORDER BY id DESC
+        """, (item["id"],))
+        item["posts"] = [dict(p) for p in cursor.fetchall()]
+
         rows.append(item)
     conn.close()
     return rows

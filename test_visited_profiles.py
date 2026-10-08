@@ -162,6 +162,21 @@ class TestDatabaseVisitedProfiles(unittest.TestCase):
         self.assertEqual(tech_prof["interaction_type"], "liked_and_saved")
         self.assertEqual(tech_prof["badge_label"], "Liked & Saved")
 
+    def test_post_removed_from_visited_profiles_on_undo(self):
+        """Undo action (unlike/unsave) immediately removes the post from Visited Profiles, reflecting only updated state."""
+        # 1. Like post 6 (urban_architecture)
+        database.toggle_like(6)
+        visited = database.get_visited_profiles()
+        urban_prof = next((v for v in visited if v["username"] == "urban_architecture"), None)
+        self.assertIsNotNone(urban_prof)
+        self.assertIn(6, [p["id"] for p in urban_prof["posts"]])
+
+        # 2. Undo like action: Unlike post 6
+        database.toggle_like(6)
+        visited_after = database.get_visited_profiles()
+        # Post and profile are completely removed from Visited Profiles
+        self.assertNotIn("urban_architecture", [v["username"] for v in visited_after])
+
     def test_no_tracking_for_other_activity(self):
         """Confirms that only is_liked and is_saved columns control Visited Profiles tracking."""
         # Ensure schema strictly enforces tracking boundaries

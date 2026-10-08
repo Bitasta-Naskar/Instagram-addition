@@ -176,6 +176,35 @@ function renderVisitedProfiles() {
     if (profile.liked_count > 0) countsDesc.push(`${profile.liked_count} liked post${profile.liked_count > 1 ? 's' : ''}`);
     if (profile.saved_count > 0) countsDesc.push(`${profile.saved_count} saved post${profile.saved_count > 1 ? 's' : ''}`);
 
+    const postsHtml = (profile.posts || []).map(post => {
+      const isLiked = post.is_liked === 1;
+      const isSaved = post.is_saved === 1;
+      return `
+        <div class="profile-post-row" data-post-id="${post.id}">
+          <img class="profile-post-thumb" src="${post.image_url}" alt="Post thumbnail" loading="lazy">
+          <div class="profile-post-info">
+            <span class="profile-post-caption" title="${escapeHtml(post.caption)}">${escapeHtml(post.caption)}</span>
+            <div class="profile-post-badges">
+              ${isLiked ? '<span class="mini-badge liked">💖 Liked</span>' : ''}
+              ${isSaved ? '<span class="mini-badge saved">🔖 Saved</span>' : ''}
+            </div>
+          </div>
+          <div class="profile-post-actions">
+            ${isLiked ? `
+              <button class="btn-undo-action" onclick="handleToggleLike(${post.id}, 'visited')" title="Unlike post (removes from visited profiles)">
+                Unlike
+              </button>
+            ` : ''}
+            ${isSaved ? `
+              <button class="btn-undo-action" onclick="handleToggleSave(${post.id}, 'visited')" title="Unsave post (removes from visited profiles)">
+                Unsave
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
     return `
       <article class="profile-card">
         <div class="profile-card-top">
@@ -189,6 +218,16 @@ function renderVisitedProfiles() {
         </div>
 
         <p class="profile-bio">${escapeHtml(profile.bio || '')}</p>
+
+        <div class="profile-posts-section">
+          <div class="profile-posts-header">
+            <span>Tracked Posts (${(profile.posts || []).length})</span>
+            <span style="font-weight: 500; font-size: 0.7rem; color: var(--text-muted);">Undo action to remove</span>
+          </div>
+          <div class="profile-posts-grid">
+            ${postsHtml}
+          </div>
+        </div>
 
         <div class="profile-card-footer">
           <span class="interaction-pill ${badgeClass}">
