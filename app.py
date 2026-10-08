@@ -18,7 +18,9 @@ import http.server
 import json
 import os
 import re
+import socket
 import sys
+from http.server import ThreadingHTTPServer
 from urllib.parse import urlparse
 
 import database
@@ -158,11 +160,27 @@ class InstagramRequestHandler(http.server.BaseHTTPRequestHandler):
         sys.stderr.write(f"[{self.log_date_time_string()}] {args[0]} {args[1]} {args[2]}\n")
 
 
+class DualStackServer(ThreadingHTTPServer):
+    address_family = socket.AF_INET6
+
+    def server_bind(self):
+        try:
+            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        except (AttributeError, OSError):
+            pass
+        super().server_bind()
+
+
 def run(port: int = PORT):
     database.init_db(seed=True)
-    server_address = ("", port)
-    httpd = http.server.HTTPServer(server_address, InstagramRequestHandler)
-    print(f"Instagram Activity Tracker running at http://localhost:{port}")
+    try:
+        httpd = DualStackServer(("::", port), InstagramRequestHandler)
+    except Exception:
+        httpd = ThreadingHTTPServer(("", port), InstagramRequestHandler)
+
+    print(f"Instagram Activity Tracker running at:")
+    print(f"  -> http://localhost:{port}")
+    print(f"  -> http://127.0.0.1:{port}")
     print("Press Ctrl+C to stop.")
     try:
         httpd.serve_forever()
